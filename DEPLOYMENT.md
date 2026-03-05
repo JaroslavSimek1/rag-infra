@@ -1,126 +1,107 @@
-# RAG System — Production Deployment Guide
+# RAG System — Deployment Guide
 
-## Struktura Projektu
+## Předpoklady
 
-```
-firecrawl-main/
-├── apps/               # Firecrawl engine (beze změn)
-├── services/
-│   ├── backend/        # FastAPI backend
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   ├── .env.example
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── ingestion.py
-│   │   └── rag.py
-│   └── frontend/       # React + Nginx
-│       ├── Dockerfile
-│       ├── nginx.conf
-│       └── src/
-├── k8s/                # Kubernetes manifesty
-│   ├── namespace.yaml
-│   ├── postgres/
-│   ├── qdrant/
-│   ├── backend/
-│   ├── frontend/
-│   └── ingress.yaml
-├── docker-compose.yaml      # Lokální vývoj (Firecrawl only)
-└── docker-compose.prod.yaml # Celý stack (prod / staging)
+Na server musí být nainstalovaný:
+
+- **Docker** (≥ 24.x)
+- **Docker Compose** (≥ 2.x)
+- **Git**
+- **16 GB RAM** doporučeno (Firecrawl build + sentence-transformers)
+
+Ollama musí běžet **lokálně na serveru** (mimo Docker) s modelem `llama3.2`:
+
+```bash
+# Instalace Ollamy na server
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.2
 ```
 
 ---
 
-## Lokální Vývoj (stávající způsob)
+## Deployment na školní server
+
+### 1. Naklonuj repozitáře vedle sebe
 
 ```bash
-# Firecrawl
-docker compose up
+mkdir projekt && cd projekt
 
-# Backend (v rag_pipeline/ ve virtualenv)
-cd rag_pipeline && source venv/bin/activate
-uvicorn main:app --reload --port 8000
-
-# Frontend
-cd rag_pipeline/frontend && npm run dev
+git clone https://github.com/JaroslavSimek1/rag-infra
+git clone https://github.com/JaroslavSimek1/rag-frontend
+git clone https://github.com/JaroslavSimek1/rag-backend
+git clone https://github.com/mendableai/firecrawl firecrawl-main
 ```
 
----
+Výsledná struktura:
 
-## Docker Compose (Staging / Demo)
+```
+projekt/
+├── firecrawl-main/
+├── rag-backend/
+├── rag-frontend/
+└── rag-infra/          ← odtud spouštíme vše
+```
+
+### 2. Uprav org v docker-compose.prod.yaml
 
 ```bash
-# Spustit celý stack
+cd rag-infra
+# Nahraď 'your-org' správnou org v docker-compose.prod.yaml
+sed -i 's/your-org/JaroslavSimek1/g' docker-compose.prod.yaml
+```
+
+### 3. Spusť celý stack
+
+```bash
+# První spuštění — build trvá 10–20 minut
 docker compose -f docker-compose.prod.yaml up --build -d
 
-# Ollama — po prvním spuštění stáhnout model
-docker exec -it <ollama-container> ollama pull llama3.2
-
-# Logy
+# Sleduj logy
 docker compose -f docker-compose.prod.yaml logs -f backend
 ```
 
+### 4. Ověření
+
+Po startu:
+
+- **Frontend**: `http://<server-ip>`
+- **Backend API**: `http://<server-ip>:8000/docs`
+- **Firecrawl**: `http://<server-ip>:3002`
+
 ---
 
-## Kubernetes (Produkce)
+## Update po změně kódu
 
-### 1. Build & Push images
+Pokud tým pushne do `rag-backend` nebo `rag-frontend`, GitHub Actions automaticky pushnout nové Docker image.
 
-```bash
-docker build -t your-registry/rag-backend:latest services/backend/
-docker build -t your-registry/rag-frontend:latest services/frontend/
-docker push your-registry/rag-backend:latest
-docker push your-registry/rag-frontend:latest
-```
-
-> Uprav `image:` v `k8s/backend/backend.yaml` a `k8s/frontend/frontend.yaml`.
-
-### 2. Deploy
+Na serveru pak stačí:
 
 ```bash
-# Namespace
-kubectl apply -f k8s/namespace.yaml
-
-# Databáze (pořadí záleží)
-kubectl apply -f k8s/postgres/postgres.yaml
-kubectl apply -f k8s/qdrant/qdrant.yaml
-
-# Počkat na readiness DB
-kubectl wait --for=condition=ready pod -l app=postgres -n rag-system --timeout=60s
-
-# Backend + Frontend
-kubectl apply -f k8s/backend/backend.yaml
-kubectl apply -f k8s/frontend/frontend.yaml
-
-# Ingress (nutný nginx-ingress-controller)
-kubectl apply -f k8s/ingress.yaml
-```
-
-### 3. Ověření
-
-```bash
-kubectl get pods -n rag-system
-kubectl logs -f deployment/backend -n rag-system
+cd rag-infra
+docker compose -f docker-compose.prod.yaml pull backend frontend
+docker compose -f docker-compose.prod.yaml up -d
 ```
 
 ---
 
-## Environmentální Proměnné (Backend)
+## Zastavení
 
-| Proměnná            | Výchozí hodnota              | Popis                                              |
-| ------------------- | ---------------------------- | -------------------------------------------------- |
-| `DATABASE_URL`      | `sqlite:///./rag_storage.db` | SQLite (dev) nebo PostgreSQL (prod)                |
-| `QDRANT_HOST`       | `localhost`                  | Hostname Qdrant instance                           |
-| `QDRANT_PORT`       | `6333`                       | Port Qdrant                                        |
-| `QDRANT_LOCAL_PATH` | _(prázdné)_                  | Pokud nastaveno, používá lokální soubor místo sítě |
-| `FIRECRAWL_URL`     | `http://localhost:3002`      | URL lokálního Firecrawlu                           |
-| `FIRECRAWL_KEY`     | `fc-local-key`               | API klíč Firecrawlu                                |
-| `OLLAMA_URL`        | `http://localhost:11434`     | URL Ollama instance                                |
-| `DATA_DIR`          | `data`                       | Složka pro uložení stažených MD souborů            |
+```bash
+docker compose -f docker-compose.prod.yaml down
+
+# Smazat i data (volumes)
+docker compose -f docker-compose.prod.yaml down -v
+```
 
 ---
 
-## TLS / HTTPS
+## Env Variables (Backend)
 
-Odkomentuj v `k8s/ingress.yaml` sekce `tls:` a `cert-manager.io/cluster-issuer:`.
-Nutný nainstalovaný [cert-manager](https://cert-manager.io/).
+| Proměnná        | Hodnota v prod compose                                 | Popis            |
+| --------------- | ------------------------------------------------------ | ---------------- |
+| `DATABASE_URL`  | `postgresql://raguser:ragpassword@postgres:5432/ragdb` | PostgreSQL       |
+| `QDRANT_HOST`   | `qdrant`                                               | Vector DB        |
+| `FIRECRAWL_URL` | `http://firecrawl-api:3002`                            | Firecrawl engine |
+| `OLLAMA_URL`    | `http://host.docker.internal:11434`                    | Lokální Ollama   |
+
+> **Hesla pro produkci:** Změň `ragpassword` v `docker-compose.prod.yaml` na bezpečné heslo před nasazením.
