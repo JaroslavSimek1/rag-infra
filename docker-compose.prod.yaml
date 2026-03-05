@@ -55,8 +55,6 @@ services:
     hostname: rabbitmq
     environment:
       RABBITMQ_ERLANG_COOKIE: "supersecretcookie"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - backend
     healthcheck:
@@ -148,7 +146,6 @@ volumes:
   postgres_data:
   qdrant_data:
   backend_data:
-  rabbitmq_data:
 
 networks:
   backend:
