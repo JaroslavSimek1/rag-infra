@@ -53,6 +53,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     hostname: rabbitmq
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "supersecretcookie"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
