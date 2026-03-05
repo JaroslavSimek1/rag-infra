@@ -109,6 +109,8 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      firecrawl-api:
+        condition: service_started
     ports:
       - "8000:8000"
     networks:
