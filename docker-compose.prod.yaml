@@ -31,12 +31,14 @@ services:
       ENV: local
       NUM_WORKERS_PER_QUEUE: 4
     depends_on:
-      - redis
-      - playwright-service
-      - rabbitmq:
-          condition: service_healthy
-      - nuq-postgres:
-          condition: service_healthy
+      redis:
+        condition: service_started
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      nuq-postgres:
+        condition: service_healthy
     ports:
       - "3002:3002"
     networks:
