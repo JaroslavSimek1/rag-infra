@@ -67,6 +67,7 @@ services:
       POSTGRES_USER: firecrawl
       POSTGRES_PASSWORD: firecrawlpassword
       POSTGRES_DB: firecrawl
+    command: ["postgres", "-c", "cron.database_name=firecrawl"]
     networks:
       - backend
     healthcheck:
