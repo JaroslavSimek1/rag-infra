@@ -52,6 +52,9 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
+    hostname: rabbitmq
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - backend
     healthcheck:
@@ -59,7 +62,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 10s
 
   nuq-postgres:
     build:
@@ -143,6 +146,7 @@ volumes:
   postgres_data:
   qdrant_data:
   backend_data:
+  rabbitmq_data:
 
 networks:
   backend:
