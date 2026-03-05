@@ -21,6 +21,21 @@ ollama pull llama3.2
 
 ## Deployment na školní server
 
+### 0. Nainstaluj Ollamu a stáhni LLM model
+
+> Ollama musí běžet přímo na serveru (mimo Docker). Toto je nutné udělat jen jednou.
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3.2
+```
+
+Ověření že Ollama běží:
+
+```bash
+ollama list   # měl by ukázat llama3.2
+```
+
 ### 1. Naklonuj repozitáře vedle sebe
 
 ```bash
