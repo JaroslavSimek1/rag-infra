@@ -53,8 +53,10 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     hostname: rabbitmq
+    user: root
     environment:
       RABBITMQ_ERLANG_COOKIE: "supersecretcookie"
+      HOME: "/var/lib/rabbitmq"
     networks:
       - backend
     healthcheck:
