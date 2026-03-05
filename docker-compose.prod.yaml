@@ -10,7 +10,7 @@ services:
   # ----- Firecrawl Engine (build from source) -----
   playwright-service:
     build:
-      context: ../firecrawl-main/apps/playwright-service-ts
+      context: ../apps/playwright-service-ts
     environment:
       PORT: 3000
     networks:
@@ -18,7 +18,7 @@ services:
 
   firecrawl-api:
     build:
-      context: ../firecrawl-main/apps/api
+      context: ../apps/api
     environment:
       HOST: "0.0.0.0"
       PORT: 3002
@@ -57,7 +57,7 @@ services:
 
   nuq-postgres:
     build:
-      context: ../firecrawl-main/apps/nuq-postgres
+      context: ../apps/nuq-postgres
     environment:
       POSTGRES_USER: firecrawl
       POSTGRES_PASSWORD: firecrawlpassword
@@ -92,7 +92,8 @@ services:
       - backend
 
   backend:
-    image: ghcr.io/your-org/rag-backend:latest # ← change your-org
+    build:
+      context: ../rag-backend
     environment:
       DATABASE_URL: postgresql://raguser:ragpassword@postgres:5432/ragdb
       QDRANT_HOST: qdrant
@@ -114,7 +115,8 @@ services:
       - backend
 
   frontend:
-    image: ghcr.io/your-org/rag-frontend:latest # ← change your-org
+    build:
+      context: ../rag-frontend
     ports:
       - "80:80"
     depends_on:
