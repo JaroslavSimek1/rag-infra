@@ -10,7 +10,7 @@ services:
   # ----- Firecrawl Engine (build from source) -----
   playwright-service:
     build:
-      context: ../apps/playwright-service-ts
+      context: ../firecrawl-main/apps/playwright-service-ts
     environment:
       PORT: 3000
     networks:
@@ -18,7 +18,7 @@ services:
 
   firecrawl-api:
     build:
-      context: ../apps/api
+      context: ../firecrawl-main/apps/api
     environment:
       HOST: "0.0.0.0"
       PORT: 3002
@@ -57,7 +57,7 @@ services:
 
   nuq-postgres:
     build:
-      context: ../apps/nuq-postgres
+      context: ../firecrawl-main/apps/nuq-postgres
     environment:
       POSTGRES_USER: firecrawl
       POSTGRES_PASSWORD: firecrawlpassword
