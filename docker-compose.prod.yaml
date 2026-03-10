@@ -122,9 +122,10 @@ services:
       FIRECRAWL_URL: http://firecrawl-api:3002
       FIRECRAWL_KEY: fc-local-key
       OLLAMA_URL: http://host.docker.internal:11434
-      DATA_DIR: /app/data
+      DATA_DIR: /app/artifacts
     volumes:
-      - backend_data:/app/data
+      - ../rag-backend/artifacts:/app/artifacts
+      - hf_cache:/root/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,6 +152,7 @@ volumes:
   postgres_data:
   qdrant_data:
   backend_data:
+  hf_cache:
 
 networks:
   backend:
