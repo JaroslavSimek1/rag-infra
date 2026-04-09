@@ -86,6 +86,35 @@ services:
       retries: 10
       start_period: 10s
 
+  # ----- Keycloak (Identity Provider) -----
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/ragdb
+      KC_DB_USERNAME: raguser
+      KC_DB_PASSWORD: ragpassword
+      KC_BOOTSTRAP_ADMIN_USERNAME: kcadmin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: kcadmin
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; timeout 1 cat <&3 | grep -q '200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   # ----- Our Services (images from GHCR) -----
   postgres:
     image: postgres:16-alpine
@@ -95,6 +124,8 @@ services:
       POSTGRES_DB: ragdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - backend
     healthcheck:
@@ -123,6 +154,10 @@ services:
       FIRECRAWL_KEY: fc-local-key
       OLLAMA_URL: http://host.docker.internal:11434
       DATA_DIR: /app/artifacts
+      PYTHONUNBUFFERED: "1"
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_PUBLIC_URL: "${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}"
+      KEYCLOAK_REALM: rag
     volumes:
       - ../rag-backend/artifacts:/app/artifacts
       - hf_cache:/root/.cache/huggingface
@@ -133,6 +168,8 @@ services:
         condition: service_started
       firecrawl-api:
         condition: service_started
+      keycloak:
+        condition: service_healthy
     ports:
       - "8000:8000"
     networks:
@@ -143,6 +180,10 @@ services:
       context: ../rag-frontend
     ports:
       - "80:80"
+      # - "443:443"  # Uncomment for HTTPS
+    # For HTTPS: uncomment volumes below and rename nginx-ssl.conf → nginx.conf
+    # volumes:
+    #   - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
     networks:
