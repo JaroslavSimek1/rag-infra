@@ -64,10 +64,10 @@ services:
       - backend
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   nuq-postgres:
     build:
